@@ -29,7 +29,7 @@
             background: #000;
             display: none;
         }
-        /* Interfaz flotante con efecto cristal (Glassmorphism) */
+        /* Interfaz flotante principal */
         .speedometer-card {
             background: rgba(30, 30, 30, 0.85);
             backdrop-filter: blur(10px);
@@ -70,19 +70,34 @@
             text-transform: uppercase;
         }
 
-        /* Estilo para el Modo HUD Minimalista (solo velocidad arriba) */
+        /* Estilo para el Modo HUD: tamaño reducido y ubicado en la parte inferior */
         body.hud-mode .hide-in-hud {
             display: none !important;
         }
+        body.hud-mode {
+            display: flex;
+            align-items: flex-end; /* Lo empuja hacia abajo */
+            justify-content: center;
+            padding-bottom: 30px;
+        }
+        body.hud-mode .container {
+            width: 100%;
+            margin: 0 !important;
+            padding: 0 15px;
+        }
         body.hud-mode .speedometer-card {
-            background: rgba(18, 18, 18, 0.65) !important;
-            border: none;
-            box-shadow: none;
-            max-width: 320px;
-            margin: 15px auto;
+            background: rgba(18, 18, 18, 0.75) !important;
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            box-shadow: 0 5px 25px rgba(0,0,0,0.8);
+            max-width: 280px; /* Más compacto */
+            margin: 0 auto;
+            padding: 15px !important;
         }
         body.hud-mode .speed-display {
-            font-size: 4rem;
+            font-size: 3rem; /* Tamaño reducido */
+        }
+        body.hud-mode .unit-label {
+            font-size: 1rem;
         }
     </style>
 </head>
@@ -104,16 +119,16 @@
 
                 <div class="card speedometer-card p-4 text-center">
                     
-                    <!-- Botón flotante para alternar Modo HUD / Pantalla Limpia -->
+                    <!-- Botón flotante para alternar Modo HUD -->
                     <div class="d-flex justify-content-end mb-1 hide-in-hud" id="hudControlContainer">
-                        <button id="hudModeBtn" class="btn btn-sm btn-dark border-secondary text-info" title="Modo HUD Minimalista">
-                            <i class="fa-solid fa-eye-low-vision me-1"></i> Modo HUD
+                        <button id="hudModeBtn" class="btn btn-sm btn-dark border-secondary text-info" title="Modo HUD Compacto Inferior">
+                            <i class="fa-solid fa-arrow-down-long me-1"></i> Modo HUD Inf.
                         </button>
                     </div>
 
                     <!-- Pantalla principal del Velocímetro -->
                     <div class="my-2">
-                        <div class="speed-label-top mb-1">
+                        <div class="speed-label-top mb-1 hide-in-hud">
                             <i class="fa-solid fa-gauge me-1"></i> VELOCIDAD ACTUAL
                         </div>
                         <span id="speedValue" class="speed-display">0.0</span>
@@ -179,9 +194,9 @@
                     </div>
                 </div>
 
-                <!-- Botón flotante para salir del modo HUD (aparece solo cuando el HUD está activo) -->
+                <!-- Botón flotante para salir del modo HUD (aparece solo abajo cuando el HUD está activo) -->
                 <div class="text-center mt-2">
-                    <button id="exitHudBtn" class="btn btn-sm btn-light shadow fw-bold" style="display: none;">
+                    <button id="exitHudBtn" class="btn btn-sm btn-light shadow fw-bold text-dark" style="display: none;">
                         <i class="fa-solid fa-arrow-rotate-left me-1"></i> Salir de Modo HUD
                     </button>
                 </div>
@@ -265,13 +280,13 @@
             updateMaxSpeedDisplay();
         });
 
-        // Activar Modo HUD Minimalista
+        // Activar Modo HUD Compacto Inferior
         hudModeBtn.addEventListener('click', () => {
             document.body.classList.add('hud-mode');
             exitHudBtn.style.display = 'inline-block';
         });
 
-        // Salir de Modo HUD Minimalista
+        // Salir de Modo HUD
         exitHudBtn.addEventListener('click', () => {
             document.body.classList.remove('hud-mode');
             exitHudBtn.style.display = 'none';
