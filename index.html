@@ -12,12 +12,12 @@
         body, html {
             height: 100%;
             margin: 0;
-            background-color: #121212;
+            background-color: transparent; /* Importante para dejar ver el video */
             color: #e0e0e0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow-x: hidden;
         }
-        /* Contenedor de la cámara de fondo */
+        /* Contenedor de la cámara de fondo ajustado */
         #cameraBackground {
             position: fixed;
             top: 0;
@@ -25,9 +25,9 @@
             width: 100vw;
             height: 100vh;
             object-fit: cover;
-            z-index: -1;
+            z-index: 0; /* Asegura que esté justo detrás de la interfaz pero visible */
             background: #000;
-            display: none; /* Oculto por defecto hasta que se active */
+            display: none;
         }
         /* Interfaz flotante con efecto cristal (Glassmorphism) */
         .speedometer-card {
@@ -75,7 +75,7 @@
     <!-- Elemento de video para la cámara en vivo de fondo -->
     <video id="cameraBackground" autoplay playsinline muted></video>
 
-    <div class="container my-4 position-relative" style="z-index: 1;">
+    <div class="container my-4 position-relative" style="z-index: 2;">
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-6">
                 
@@ -190,7 +190,6 @@
         const historyList = document.getElementById('historyList');
         const cameraBackground = document.getElementById('cameraBackground');
 
-        // Cargar datos guardados previamente del localStorage al iniciar
         document.addEventListener('DOMContentLoaded', () => {
             const savedMax = localStorage.getItem('max_speed');
             const savedUnit = localStorage.getItem('speed_unit');
@@ -217,11 +216,11 @@
         function convertSpeed(speedInMetersPerSecond) {
             if (speedInMetersPerSecond === null || isNaN(speedInMetersPerSecond)) return 0;
             if (currentUnit === 'mph') {
-                return speedInMetersPerSecond * 2.23694; // m/s a mph
+                return speedInMetersPerSecond * 2.23694;
             } else if (currentUnit === 'ms') {
                 return speedInMetersPerSecond;
             } else {
-                return speedInMetersPerSecond * 3.6; // m/s a km/h
+                return speedInMetersPerSecond * 3.6;
             }
         }
 
@@ -233,24 +232,27 @@
             updateMaxSpeedDisplay();
         });
 
-        // Control de Cámara en Vivo (Dashcam)
+        // Control mejorado de la cámara en vivo
         toggleCameraBtn.addEventListener('click', async () => {
             if (!cameraActive) {
                 try {
                     mediaStream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: { exact: "environment" } } // Intenta usar la cámara trasera
-                    }).catch(() => {
-                        // Si falla la trasera exacta, recurre a cualquier cámara disponible
-                        return navigator.mediaDevices.getUserMedia({ video: true });
+                        video: { facingMode: { ideal: "environment" } },
+                        audio: false
                     });
 
                     cameraBackground.srcObject = mediaStream;
                     cameraBackground.style.display = 'block';
+                    
+                    // Forzar reproducción para móviles
+                    await cameraBackground.play();
+
                     cameraActive = true;
                     toggleCameraBtn.className = "btn btn-info btn-sm fw-semibold text-dark";
                     toggleCameraBtn.innerHTML = '<i class="fa-solid fa-camera-slash me-1"></i> Desactivar Cámara de Fondo';
                 } catch (err) {
-                    alert("No se pudo acceder a la cámara. Asegúrate de dar permisos en tu navegador.");
+                    console.error(err);
+                    alert("No se pudo acceder a la cámara. Verifica los permisos de tu navegador.");
                 }
             } else {
                 if (mediaStream) {
