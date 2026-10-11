@@ -70,15 +70,20 @@
             text-transform: uppercase;
         }
 
-        /* Estilo para el Modo HUD: tamaño reducido y ubicado en la parte inferior */
+        /* Elementos de fecha y hora (Ocultos por defecto fuera del modo HUD) */
+        .hud-datetime-info {
+            display: none;
+        }
+
+        /* Estilo para el Modo HUD: compacto, abajo, con fecha y hora integradas */
         body.hud-mode .hide-in-hud {
             display: none !important;
         }
         body.hud-mode {
             display: flex;
-            align-items: flex-end; /* Lo empuja hacia abajo */
+            align-items: flex-end;
             justify-content: center;
-            padding-bottom: 30px;
+            padding-bottom: 25px;
         }
         body.hud-mode .container {
             width: 100%;
@@ -86,18 +91,31 @@
             padding: 0 15px;
         }
         body.hud-mode .speedometer-card {
-            background: rgba(18, 18, 18, 0.75) !important;
-            border: 1px solid rgba(0, 255, 204, 0.3);
-            box-shadow: 0 5px 25px rgba(0,0,0,0.8);
-            max-width: 280px; /* Más compacto */
+            background: rgba(18, 18, 18, 0.8) !important;
+            border: 1px solid rgba(0, 255, 204, 0.4);
+            box-shadow: 0 5px 25px rgba(0,0,0,0.9);
+            max-width: 310px; /* Ligeramente más ancho para alojar fecha y hora */
             margin: 0 auto;
-            padding: 15px !important;
+            padding: 12px 15px !important;
         }
         body.hud-mode .speed-display {
-            font-size: 3rem; /* Tamaño reducido */
+            font-size: 3rem; 
         }
         body.hud-mode .unit-label {
             font-size: 1rem;
+        }
+        /* Mostrar fecha y hora solo en modo HUD */
+        body.hud-mode .hud-datetime-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.7rem;
+            color: #00ffcc;
+            font-family: monospace;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            padding-bottom: 5px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
         }
     </style>
 </head>
@@ -119,6 +137,12 @@
 
                 <div class="card speedometer-card p-4 text-center">
                     
+                    <!-- Fecha (izquierda) y Hora (derecha) flotantes dentro del HUD -->
+                    <div class="hud-datetime-info">
+                        <span id="hudDateDisplay"><i class="fa-regular fa-calendar me-1"></i> --/--/----</span>
+                        <span id="hudTimeDisplay"><i class="fa-regular fa-clock me-1"></i> --:--:--</span>
+                    </div>
+
                     <!-- Botón flotante para alternar Modo HUD -->
                     <div class="d-flex justify-content-end mb-1 hide-in-hud" id="hudControlContainer">
                         <button id="hudModeBtn" class="btn btn-sm btn-dark border-secondary text-info" title="Modo HUD Compacto Inferior">
@@ -127,7 +151,7 @@
                     </div>
 
                     <!-- Pantalla principal del Velocímetro -->
-                    <div class="my-2">
+                    <div class="my-1">
                         <div class="speed-label-top mb-1 hide-in-hud">
                             <i class="fa-solid fa-gauge me-1"></i> VELOCIDAD ACTUAL
                         </div>
@@ -135,7 +159,7 @@
                         <div id="unitDisplay" class="unit-label mt-1">km/h</div>
                     </div>
 
-                    <hr class="border-secondary opacity-50 my-3 hide-in-hud">
+                    <hr class="border-secondary opacity-50 my-2 hide-in-hud">
 
                     <!-- Métricas secundarias (Se ocultan en modo HUD) -->
                     <div class="row text-center mt-1 hide-in-hud">
@@ -194,7 +218,7 @@
                     </div>
                 </div>
 
-                <!-- Botón flotante para salir del modo HUD (aparece solo abajo cuando el HUD está activo) -->
+                <!-- Botón flotante para salir del modo HUD -->
                 <div class="text-center mt-2">
                     <button id="exitHudBtn" class="btn btn-sm btn-light shadow fw-bold text-dark" style="display: none;">
                         <i class="fa-solid fa-arrow-rotate-left me-1"></i> Salir de Modo HUD
@@ -222,6 +246,7 @@
         let currentUnit = 'kmh';
         let mediaStream = null;
         let cameraActive = false;
+        let clockInterval = null;
         
         const speedValueEl = document.getElementById('speedValue');
         const unitDisplayEl = document.getElementById('unitDisplay');
@@ -237,6 +262,8 @@
         const cameraBackground = document.getElementById('cameraBackground');
         const hudModeBtn = document.getElementById('hudModeBtn');
         const exitHudBtn = document.getElementById('exitHudBtn');
+        const hudDateDisplay = document.getElementById('hudDateDisplay');
+        const hudTimeDisplay = document.getElementById('hudTimeDisplay');
 
         document.addEventListener('DOMContentLoaded', () => {
             const savedMax = localStorage.getItem('max_speed');
@@ -280,16 +307,29 @@
             updateMaxSpeedDisplay();
         });
 
-        // Activar Modo HUD Compacto Inferior
+        // Función para actualizar fecha y hora en vivo
+        function updateDateTime() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('es-AR');
+            const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            hudDateDisplay.innerHTML = `<i class="fa-regular fa-calendar me-1"></i> ${dateStr}`;
+            hudTimeDisplay.innerHTML = `<i class="fa-regular fa-clock me-1"></i> ${timeStr}`;
+        }
+
+        // Activar Modo HUD Compacto Inferior con Reloj
         hudModeBtn.addEventListener('click', () => {
             document.body.classList.add('hud-mode');
             exitHudBtn.style.display = 'inline-block';
+            updateDateTime();
+            clockInterval = setInterval(updateDateTime, 1000); // Inicia el reloj por segundo
         });
 
         // Salir de Modo HUD
         exitHudBtn.addEventListener('click', () => {
             document.body.classList.remove('hud-mode');
             exitHudBtn.style.display = 'none';
+            if (clockInterval) clearInterval(clockInterval); // Detiene el reloj para ahorrar recursos
         });
 
         // Control de la cámara en vivo
