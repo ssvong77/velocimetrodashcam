@@ -70,12 +70,12 @@
             text-transform: uppercase;
         }
 
-        /* Elementos de fecha y hora (Ocultos por defecto fuera del modo HUD) */
+        /* Elementos de fecha y hora (Ocultos fuera del modo HUD) */
         .hud-datetime-info {
             display: none;
         }
 
-        /* Estilo para el Modo HUD: compacto, abajo, con fecha y hora integradas */
+        /* Estilo para el Modo HUD: compacto, abajo, con fecha, hora y botón de captura */
         body.hud-mode .hide-in-hud {
             display: none !important;
         }
@@ -94,7 +94,7 @@
             background: rgba(18, 18, 18, 0.8) !important;
             border: 1px solid rgba(0, 255, 204, 0.4);
             box-shadow: 0 5px 25px rgba(0,0,0,0.9);
-            max-width: 310px; /* Ligeramente más ancho para alojar fecha y hora */
+            max-width: 320px;
             margin: 0 auto;
             padding: 12px 15px !important;
         }
@@ -104,7 +104,6 @@
         body.hud-mode .unit-label {
             font-size: 1rem;
         }
-        /* Mostrar fecha y hora solo en modo HUD */
         body.hud-mode .hud-datetime-info {
             display: flex;
             justify-content: space-between;
@@ -143,11 +142,16 @@
                         <span id="hudTimeDisplay"><i class="fa-regular fa-clock me-1"></i> --:--:--</span>
                     </div>
 
-                    <!-- Botón flotante para alternar Modo HUD -->
-                    <div class="d-flex justify-content-end mb-1 hide-in-hud" id="hudControlContainer">
-                        <button id="hudModeBtn" class="btn btn-sm btn-dark border-secondary text-info" title="Modo HUD Compacto Inferior">
-                            <i class="fa-solid fa-arrow-down-long me-1"></i> Modo HUD Inf.
+                    <!-- Controles superiores de la tarjeta (Modo HUD e Instantánea) -->
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <button id="captureSnapshotHudBtn" class="btn btn-sm btn-outline-warning hud-datetime-info" title="Tomar Foto Instantánea HUD">
+                            <i class="fa-solid fa-camera-retro"></i> Capturar
                         </button>
+                        <div class="ms-auto hide-in-hud" id="hudControlContainer">
+                            <button id="hudModeBtn" class="btn btn-sm btn-dark border-secondary text-info" title="Modo HUD Compacto Inferior">
+                                <i class="fa-solid fa-arrow-down-long me-1"></i> Modo HUD Inf.
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Pantalla principal del Velocímetro -->
@@ -189,11 +193,18 @@
                             </button>
                         </div>
 
-                        <!-- Botón para activar/desactivar la cámara en vivo -->
-                        <div class="d-grid gap-2 mb-3">
-                            <button id="toggleCameraBtn" class="btn btn-outline-info btn-sm fw-semibold">
-                                <i class="fa-solid fa-camera me-1"></i> Activar Cámara de Fondo (Dashcam)
-                            </button>
+                        <!-- Botones para activar cámara y tomar captura en modo normal -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-7">
+                                <button id="toggleCameraBtn" class="btn btn-outline-info btn-sm fw-semibold w-100">
+                                    <i class="fa-solid fa-camera me-1"></i> Activar Cámara
+                                </button>
+                            </div>
+                            <div class="col-5">
+                                <button id="captureSnapshotBtn" class="btn btn-outline-warning btn-sm fw-semibold w-100">
+                                    <i class="fa-solid fa-camera-retro me-1"></i> Capturar Foto
+                                </button>
+                            </div>
                         </div>
 
                         <div class="row g-2 align-items-center">
@@ -237,6 +248,9 @@
         </div>
     </div>
 
+    <!-- Canvas oculto para procesar la fotografía instantánea -->
+    <canvas id="snapshotCanvas" style="display: none;"></canvas>
+
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -255,6 +269,8 @@
         const gpsAccuracyEl = document.getElementById('gpsAccuracy');
         const toggleBtn = document.getElementById('toggleBtn');
         const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+        const captureSnapshotBtn = document.getElementById('captureSnapshotBtn');
+        const captureSnapshotHudBtn = document.getElementById('captureSnapshotHudBtn');
         const resetBtn = document.getElementById('resetBtn');
         const unitSelect = document.getElementById('unitSelect');
         const statusAlert = document.getElementById('statusAlert');
@@ -264,6 +280,7 @@
         const exitHudBtn = document.getElementById('exitHudBtn');
         const hudDateDisplay = document.getElementById('hudDateDisplay');
         const hudTimeDisplay = document.getElementById('hudTimeDisplay');
+        const snapshotCanvas = document.getElementById('snapshotCanvas');
 
         document.addEventListener('DOMContentLoaded', () => {
             const savedMax = localStorage.getItem('max_speed');
@@ -307,7 +324,7 @@
             updateMaxSpeedDisplay();
         });
 
-        // Función para actualizar fecha y hora en vivo
+        // Actualizar fecha y hora en vivo
         function updateDateTime() {
             const now = new Date();
             const dateStr = now.toLocaleDateString('es-AR');
@@ -317,19 +334,19 @@
             hudTimeDisplay.innerHTML = `<i class="fa-regular fa-clock me-1"></i> ${timeStr}`;
         }
 
-        // Activar Modo HUD Compacto Inferior con Reloj
+        // Activar Modo HUD
         hudModeBtn.addEventListener('click', () => {
             document.body.classList.add('hud-mode');
             exitHudBtn.style.display = 'inline-block';
             updateDateTime();
-            clockInterval = setInterval(updateDateTime, 1000); // Inicia el reloj por segundo
+            clockInterval = setInterval(updateDateTime, 1000);
         });
 
         // Salir de Modo HUD
         exitHudBtn.addEventListener('click', () => {
             document.body.classList.remove('hud-mode');
             exitHudBtn.style.display = 'none';
-            if (clockInterval) clearInterval(clockInterval); // Detiene el reloj para ahorrar recursos
+            if (clockInterval) clearInterval(clockInterval);
         });
 
         // Control de la cámara en vivo
@@ -346,8 +363,8 @@
                     await cameraBackground.play();
 
                     cameraActive = true;
-                    toggleCameraBtn.className = "btn btn-info btn-sm fw-semibold text-dark";
-                    toggleCameraBtn.innerHTML = '<i class="fa-solid fa-camera-slash me-1"></i> Desactivar Cámara de Fondo';
+                    toggleCameraBtn.className = "btn btn-info btn-sm fw-semibold text-dark w-100";
+                    toggleCameraBtn.innerHTML = '<i class="fa-solid fa-camera-slash me-1"></i> Apagar Cámara';
                 } catch (err) {
                     console.error(err);
                     alert("No se pudo acceder a la cámara. Verifica los permisos de tu navegador.");
@@ -359,10 +376,69 @@
                 cameraBackground.srcObject = null;
                 cameraBackground.style.display = 'none';
                 cameraActive = false;
-                toggleCameraBtn.className = "btn btn-outline-info btn-sm fw-semibold";
-                toggleCameraBtn.innerHTML = '<i class="fa-solid fa-camera me-1"></i> Activar Cámara de Fondo (Dashcam)';
+                toggleCameraBtn.className = "btn btn-outline-info btn-sm fw-semibold w-100";
+                toggleCameraBtn.innerHTML = '<i class="fa-solid fa-camera me-1"></i> Activar Cámara';
             }
         });
+
+        // Función de captura de foto instantánea (Dashcam)
+        function takeSnapshot() {
+            if (!cameraActive) {
+                alert("Debes activar la cámara de fondo para tomar una instantánea.");
+                return;
+            }
+
+            const video = cameraBackground;
+            const width = video.videoWidth || 1280;
+            const height = video.videoHeight || 720;
+
+            snapshotCanvas.width = width;
+            snapshotCanvas.height = height;
+            const ctx = snapshotCanvas.getContext('2d');
+
+            // 1. Dibujar el fotograma actual de la cámara
+            ctx.drawImage(video, 0, 0, width, height);
+
+            // 2. Estampar datos flotantes de velocidad y marca en la imagen
+            const currentSpeedText = `${speedValueEl.textContent} ${getUnitLabel()}`;
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('es-AR');
+            const timeStr = now.toLocaleTimeString('es-AR');
+
+            // Fondo translúcido para las estadísticas estampadas
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            ctx.fillRect(40, 40, 480, 160);
+            ctx.strokeStyle = "#00ffcc";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(40, 40, 480, 160);
+
+            // Textos sobre la imagen
+            ctx.fillStyle = "#00ffcc";
+            ctx.font = "bold 32px monospace";
+            ctx.fillText(`CAMISOLUS SPEEDTRACKER`, 65, 85);
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 24px monospace";
+            ctx.fillText(`FECHA: ${dateStr}   HORA: ${timeStr}`, 65, 125);
+
+            ctx.fillStyle = "#00ffcc";
+            ctx.font = "bold 48px sans-serif";
+            ctx.fillText(`VEL: ${currentSpeedText}`, 65, 178);
+
+            // 3. Generar enlace de descarga automática
+            const dataURL = snapshotCanvas.toDataURL('image/png');
+            const timestampFormatted = now.toISOString().slice(0, 10) + '_' + now.toTimeString().slice(0, 8).replace(/:/g, '-');
+            
+            const downloadLink = document.createElement('a');
+            downloadLink.href = dataURL;
+            downloadLink.download = `Camisolus_Dashcam_${timestampFormatted}.png`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+        captureSnapshotBtn.addEventListener('click', takeSnapshot);
+        captureSnapshotHudBtn.addEventListener('click', takeSnapshot);
 
         toggleBtn.addEventListener('click', () => {
             if (watchId === null) {
