@@ -12,12 +12,12 @@
         body, html {
             height: 100%;
             margin: 0;
-            background-color: transparent; /* Importante para dejar ver el video */
+            background-color: transparent;
             color: #e0e0e0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow-x: hidden;
         }
-        /* Contenedor de la cámara de fondo ajustado */
+        /* Contenedor de la cámara de fondo */
         #cameraBackground {
             position: fixed;
             top: 0;
@@ -25,7 +25,7 @@
             width: 100vw;
             height: 100vh;
             object-fit: cover;
-            z-index: 0; /* Asegura que esté justo detrás de la interfaz pero visible */
+            z-index: 0;
             background: #000;
             display: none;
         }
@@ -37,6 +37,7 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 20px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            transition: all 0.3s ease;
         }
         .speed-label-top {
             font-size: 0.85rem;
@@ -68,6 +69,21 @@
             color: #aaa;
             text-transform: uppercase;
         }
+
+        /* Estilo para el Modo HUD Minimalista (solo velocidad arriba) */
+        body.hud-mode .hide-in-hud {
+            display: none !important;
+        }
+        body.hud-mode .speedometer-card {
+            background: rgba(18, 18, 18, 0.65) !important;
+            border: none;
+            box-shadow: none;
+            max-width: 320px;
+            margin: 15px auto;
+        }
+        body.hud-mode .speed-display {
+            font-size: 4rem;
+        }
     </style>
 </head>
 <body>
@@ -79,14 +95,22 @@
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-6">
                 
-                <!-- Cabecera de Marca -->
-                <div class="text-center mb-3">
+                <!-- Cabecera de Marca (Se oculta en modo HUD) -->
+                <div class="text-center mb-3 hide-in-hud">
                     <span class="brand-subtitle"><i class="fa-solid fa-layer-group text-info me-1"></i> Camisolus Web Utility</span>
                     <h1 class="fw-bold text-light mb-1"><i class="fa-solid fa-gauge-high text-info me-2"></i> SpeedTracker</h1>
                     <p class="text-muted small">Medidor de desplazamiento en tiempo real con opción Dashcam</p>
                 </div>
 
                 <div class="card speedometer-card p-4 text-center">
+                    
+                    <!-- Botón flotante para alternar Modo HUD / Pantalla Limpia -->
+                    <div class="d-flex justify-content-end mb-1 hide-in-hud" id="hudControlContainer">
+                        <button id="hudModeBtn" class="btn btn-sm btn-dark border-secondary text-info" title="Modo HUD Minimalista">
+                            <i class="fa-solid fa-eye-low-vision me-1"></i> Modo HUD
+                        </button>
+                    </div>
+
                     <!-- Pantalla principal del Velocímetro -->
                     <div class="my-2">
                         <div class="speed-label-top mb-1">
@@ -96,10 +120,10 @@
                         <div id="unitDisplay" class="unit-label mt-1">km/h</div>
                     </div>
 
-                    <hr class="border-secondary opacity-50 my-3">
+                    <hr class="border-secondary opacity-50 my-3 hide-in-hud">
 
-                    <!-- Métricas secundarias -->
-                    <div class="row text-center mt-1">
+                    <!-- Métricas secundarias (Se ocultan en modo HUD) -->
+                    <div class="row text-center mt-1 hide-in-hud">
                         <div class="col-6">
                             <div class="metric-box">
                                 <small class="text-muted d-block mb-1 fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">
@@ -118,8 +142,8 @@
                         </div>
                     </div>
 
-                    <!-- Controles principales -->
-                    <div class="mt-3">
+                    <!-- Controles principales (Se ocultan en modo HUD) -->
+                    <div class="mt-3 hide-in-hud">
                         <div class="d-grid gap-2 mb-2">
                             <button id="toggleBtn" class="btn btn-success btn-lg fw-bold py-3 shadow">
                                 <i class="fa-solid fa-play me-2"></i> Iniciar GPS
@@ -149,14 +173,21 @@
                         </div>
                     </div>
 
-                    <!-- Alertas de estado -->
-                    <div id="statusAlert" class="alert alert-secondary mt-3 mb-0 py-2 small" role="alert" style="background: rgba(40,40,40,0.8); color: #ccc; border: none;">
+                    <!-- Alertas de estado (Se ocultan en modo HUD) -->
+                    <div id="statusAlert" class="alert alert-secondary mt-3 mb-0 py-2 small hide-in-hud" role="alert" style="background: rgba(40,40,40,0.8); color: #ccc; border: none;">
                         Estado: Detenido. Haz clic en "Iniciar GPS" para comenzar.
                     </div>
                 </div>
 
-                <!-- Historial guardado -->
-                <div class="card speedometer-card p-3 mt-3">
+                <!-- Botón flotante para salir del modo HUD (aparece solo cuando el HUD está activo) -->
+                <div class="text-center mt-2">
+                    <button id="exitHudBtn" class="btn btn-sm btn-light shadow fw-bold" style="display: none;">
+                        <i class="fa-solid fa-arrow-rotate-left me-1"></i> Salir de Modo HUD
+                    </button>
+                </div>
+
+                <!-- Historial guardado (Se oculta en modo HUD) -->
+                <div class="card speedometer-card p-3 mt-3 hide-in-hud">
                     <h5 class="text-light mb-2 fs-6"><i class="fa-solid fa-history me-2 text-warning"></i> Historial de Registros Guardados</h5>
                     <ul id="historyList" class="list-group list-group-flush bg-transparent">
                         <li class="list-group-item bg-transparent text-muted small border-secondary">No hay registros guardados aún.</li>
@@ -189,6 +220,8 @@
         const statusAlert = document.getElementById('statusAlert');
         const historyList = document.getElementById('historyList');
         const cameraBackground = document.getElementById('cameraBackground');
+        const hudModeBtn = document.getElementById('hudModeBtn');
+        const exitHudBtn = document.getElementById('exitHudBtn');
 
         document.addEventListener('DOMContentLoaded', () => {
             const savedMax = localStorage.getItem('max_speed');
@@ -232,7 +265,19 @@
             updateMaxSpeedDisplay();
         });
 
-        // Control mejorado de la cámara en vivo
+        // Activar Modo HUD Minimalista
+        hudModeBtn.addEventListener('click', () => {
+            document.body.classList.add('hud-mode');
+            exitHudBtn.style.display = 'inline-block';
+        });
+
+        // Salir de Modo HUD Minimalista
+        exitHudBtn.addEventListener('click', () => {
+            document.body.classList.remove('hud-mode');
+            exitHudBtn.style.display = 'none';
+        });
+
+        // Control de la cámara en vivo
         toggleCameraBtn.addEventListener('click', async () => {
             if (!cameraActive) {
                 try {
@@ -243,8 +288,6 @@
 
                     cameraBackground.srcObject = mediaStream;
                     cameraBackground.style.display = 'block';
-                    
-                    // Forzar reproducción para móviles
                     await cameraBackground.play();
 
                     cameraActive = true;
