@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camisolus SpeedTracker</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+        /* Contenedor de la cámara de fondo */
+        #cameraBackground {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: -1;
+            background: #000;
+            display: none; /* Oculto por defecto hasta que se active */
+        }
+        /* Interfaz flotante con efecto cristal (Glassmorphism) */
+        .speedometer-card {
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        .speed-label-top {
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            color: #00ffcc;
+            font-weight: 700;
+        }
+        .speed-display {
+            font-size: 5rem;
+            font-weight: bold;
+            color: #00ffcc;
+            text-shadow: 0 0 20px rgba(0, 255, 204, 0.6);
+            line-height: 1;
+        }
+        .unit-label {
+            font-size: 1.4rem;
+            color: #aaa;
+        }
+        .metric-box {
+            background: rgba(42, 42, 42, 0.7);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .brand-subtitle {
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Elemento de video para la cámara en vivo de fondo -->
+    <video id="cameraBackground" autoplay playsinline muted></video>
+
+    <div class="container my-4 position-relative" style="z-index: 1;">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                
+                <!-- Cabecera de Marca -->
+                <div class="text-center mb-3">
+                    <span class="brand-subtitle"><i class="fa-solid fa-layer-group text-info me-1"></i> Camisolus Web Utility</span>
+                    <h1 class="fw-bold text-light mb-1"><i class="fa-solid fa-gauge-high text-info me-2"></i> SpeedTracker</h1>
+                    <p class="text-muted small">Medidor de desplazamiento en tiempo real con opción Dashcam</p>
+                </div>
+
+                <div class="card speedometer-card p-4 text-center">
+                    <!-- Pantalla principal del Velocímetro -->
+                    <div class="my-2">
+                        <div class="speed-label-top mb-1">
+                            <i class="fa-solid fa-gauge me-1"></i> VELOCIDAD ACTUAL
+                        </div>
+                        <span id="speedValue" class="speed-display">0.0</span>
+                        <div id="unitDisplay" class="unit-label mt-1">km/h</div>
+                    </div>
+
+                    <hr class="border-secondary opacity-50 my-3">
+
+                    <!-- Métricas secundarias -->
+                    <div class="row text-center mt-1">
+                        <div class="col-6">
+                            <div class="metric-box">
+                                <small class="text-muted d-block mb-1 fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">
+                                    <i class="fa-solid fa-trophy text-warning me-1"></i> MÁXIMA
+                                </small>
+                                <span id="maxSpeed" class="fs-3 fw-bold text-warning">0.0</span> <small class="text-muted" id="maxUnit">km/h</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-box">
+                                <small class="text-muted d-block mb-1 fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">
+                                    <i class="fa-solid fa-satellite text-info me-1"></i> GPS (PRECISIÓN)
+                                </small>
+                                <span id="gpsAccuracy" class="fs-3 fw-bold text-info">-</span> <small class="text-muted">m</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controles principales -->
+                    <div class="mt-3">
+                        <div class="d-grid gap-2 mb-2">
+                            <button id="toggleBtn" class="btn btn-success btn-lg fw-bold py-3 shadow">
+                                <i class="fa-solid fa-play me-2"></i> Iniciar GPS
+                            </button>
+                        </div>
+
+                        <!-- Botón para activar/desactivar la cámara en vivo -->
+                        <div class="d-grid gap-2 mb-3">
+                            <button id="toggleCameraBtn" class="btn btn-outline-info btn-sm fw-semibold">
+                                <i class="fa-solid fa-camera me-1"></i> Activar Cámara de Fondo (Dashcam)
+                            </button>
+                        </div>
+
+                        <div class="row g-2 align-items-center">
+                            <div class="col-6">
+                                <select id="unitSelect" class="form-select bg-dark text-light border-secondary form-select-sm">
+                                    <option value="kmh">Km/h (Kilómetros)</option>
+                                    <option value="mph">Mph (Millas)</option>
+                                    <option value="ms">m/s (Metros/seg)</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <button id="resetBtn" class="btn btn-outline-danger btn-sm w-100">
+                                    <i class="fa-solid fa-rotate-right me-1"></i> Reiniciar Máx
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alertas de estado -->
+                    <div id="statusAlert" class="alert alert-secondary mt-3 mb-0 py-2 small" role="alert" style="background: rgba(40,40,40,0.8); color: #ccc; border: none;">
+                        Estado: Detenido. Haz clic en "Iniciar GPS" para comenzar.
+                    </div>
+                </div>
+
+                <!-- Historial guardado -->
+                <div class="card speedometer-card p-3 mt-3">
+                    <h5 class="text-light mb-2 fs-6"><i class="fa-solid fa-history me-2 text-warning"></i> Historial de Registros Guardados</h5>
+                    <ul id="historyList" class="list-group list-group-flush bg-transparent">
+                        <li class="list-group-item bg-transparent text-muted small border-secondary">No hay registros guardados aún.</li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let watchId = null;
+        let maxSpeedValue = 0;
+        let currentUnit = 'kmh';
+        let mediaStream = null;
+        let cameraActive = false;
+        
+        const speedValueEl = document.getElementById('speedValue');
+        const unitDisplayEl = document.getElementById('unitDisplay');
+        const maxSpeedEl = document.getElementById('maxSpeed');
+        const maxUnitEl = document.getElementById('maxUnit');
+        const gpsAccuracyEl = document.getElementById('gpsAccuracy');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const unitSelect = document.getElementById('unitSelect');
+        const statusAlert = document.getElementById('statusAlert');
+        const historyList = document.getElementById('historyList');
+        const cameraBackground = document.getElementById('cameraBackground');
+
+        // Cargar datos guardados previamente del localStorage al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedMax = localStorage.getItem('max_speed');
+            const savedUnit = localStorage.getItem('speed_unit');
+            
+            if (savedMax) {
+                maxSpeedValue = parseFloat(savedMax);
+                updateMaxSpeedDisplay();
+            }
+            if (savedUnit) {
+                currentUnit = savedUnit;
+                unitSelect.value = currentUnit;
+                unitDisplayEl.textContent = getUnitLabel();
+                maxUnitEl.textContent = getUnitLabel();
+            }
+            loadHistory();
+        });
+
+        function getUnitLabel() {
+            if (currentUnit === 'mph') return 'mph';
+            if (currentUnit === 'ms') return 'm/s';
+            return 'km/h';
+        }
+
+        function convertSpeed(speedInMetersPerSecond) {
+            if (speedInMetersPerSecond === null || isNaN(speedInMetersPerSecond)) return 0;
+            if (currentUnit === 'mph') {
+                return speedInMetersPerSecond * 2.23694; // m/s a mph
+            } else if (currentUnit === 'ms') {
+                return speedInMetersPerSecond;
+            } else {
+                return speedInMetersPerSecond * 3.6; // m/s a km/h
+            }
+        }
+
+        unitSelect.addEventListener('change', (e) => {
+            currentUnit = e.target.value;
+            localStorage.setItem('speed_unit', currentUnit);
+            unitDisplayEl.textContent = getUnitLabel();
+            maxUnitEl.textContent = getUnitLabel();
+            updateMaxSpeedDisplay();
+        });
+
+        // Control de Cámara en Vivo (Dashcam)
+        toggleCameraBtn.addEventListener('click', async () => {
+            if (!cameraActive) {
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { exact: "environment" } } // Intenta usar la cámara trasera
+                    }).catch(() => {
+                        // Si falla la trasera exacta, recurre a cualquier cámara disponible
+                        return navigator.mediaDevices.getUserMedia({ video: true });
+                    });
+
+                    cameraBackground.srcObject = mediaStream;
+                    cameraBackground.style.display = 'block';
+                    cameraActive = true;
+                    toggleCameraBtn.className = "btn btn-info btn-sm fw-semibold text-dark";
+                    toggleCameraBtn.innerHTML = '<i class="fa-solid fa-camera-slash me-1"></i> Desactivar Cámara de Fondo';
+                } catch (err) {
+                    alert("No se pudo acceder a la cámara. Asegúrate de dar permisos en tu navegador.");
+                }
+            } else {
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                }
+                cameraBackground.srcObject = null;
+                cameraBackground.style.display = 'none';
+                cameraActive = false;
+                toggleCameraBtn.className = "btn btn-outline-info btn-sm fw-semibold";
+                toggleCameraBtn.innerHTML = '<i class="fa-solid fa-camera me-1"></i> Activar Cámara de Fondo (Dashcam)';
+            }
+        });
+
+        toggleBtn.addEventListener('click', () => {
+            if (watchId === null) {
+                startTracking();
+            } else {
+                stopTracking();
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            maxSpeedValue = 0;
+            localStorage.setItem('max_speed', maxSpeedValue);
+            updateMaxSpeedDisplay();
+            statusAlert.className = "alert alert-info mt-3 mb-0 py-2 small";
+            statusAlert.textContent = "Velocidad máxima restablecida.";
+        });
+
+        function startTracking() {
+            if (!navigator.geolocation) {
+                alert("Tu navegador no soporta geolocalización.");
+                return;
+            }
+
+            statusAlert.className = "alert alert-warning mt-3 mb-0 py-2 small";
+            statusAlert.textContent = "Buscando señal de GPS...";
+            
+            toggleBtn.className = "btn btn-danger btn-lg fw-bold py-3 shadow";
+            toggleBtn.innerHTML = '<i class="fa-solid fa-stop me-2"></i> Detener GPS';
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+
+            watchId = navigator.geolocation.watchPosition(successPosition, errorPosition, options);
+        }
+
+        function stopTracking() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+
+            toggleBtn.className = "btn btn-success btn-lg fw-bold py-3 shadow";
+            toggleBtn.innerHTML = '<i class="fa-solid fa-play me-2"></i> Iniciar GPS';
+            
+            statusAlert.className = "alert alert-secondary mt-3 mb-0 py-2 small";
+            statusAlert.textContent = "Estado: Detenido.";
+            speedValueEl.textContent = "0.0";
+            gpsAccuracyEl.textContent = "-";
+
+            if (maxSpeedValue > 0) {
+                saveToHistory(maxSpeedValue, currentUnit);
+            }
+        }
+
+        function successPosition(position) {
+            statusAlert.className = "alert alert-success mt-3 mb-0 py-2 small";
+            statusAlert.textContent = "GPS conectado y recibiendo datos correctamente.";
+
+            const rawSpeed = position.coords.speed !== null ? position.coords.speed : 0;
+            const converted = convertSpeed(rawSpeed);
+            
+            speedValueEl.textContent = converted.toFixed(1);
+
+            if (position.coords.accuracy) {
+                gpsAccuracyEl.textContent = Math.round(position.coords.accuracy);
+            }
+
+            if (converted > maxSpeedValue) {
+                maxSpeedValue = converted;
+                localStorage.setItem('max_speed', maxSpeedValue);
+                updateMaxSpeedDisplay();
+            }
+        }
+
+        function errorPosition(error) {
+            statusAlert.className = "alert alert-danger mt-3 mb-0 py-2 small";
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    statusAlert.textContent = "Permiso de GPS denegado por el usuario.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    statusAlert.textContent = "Información de ubicación no disponible.";
+                    break;
+                case error.TIMEOUT:
+                    statusAlert.textContent = "Tiempo de espera agotado al buscar GPS.";
+                    break;
+                default:
+                    statusAlert.textContent = "Error desconocido de GPS.";
+                    break;
+            }
+            stopTracking();
+        }
+
+        function updateMaxSpeedDisplay() {
+            maxSpeedEl.textContent = maxSpeedValue.toFixed(1);
+        }
+
+        function saveToHistory(maxSpd, unit) {
+            let history = JSON.parse(localStorage.getItem('speed_history')) || [];
+            const newRecord = {
+                date: new Date().toLocaleString(),
+                maxSpeed: maxSpd.toFixed(1),
+                unit: unit
+            };
+            history.unshift(newRecord);
+            if (history.length > 5) history.pop();
+            localStorage.setItem('speed_history', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            let history = JSON.parse(localStorage.getItem('speed_history')) || [];
+            if (history.length === 0) {
+                historyList.innerHTML = '<li class="list-group-item bg-transparent text-muted small border-secondary">No hay registros guardados aún.</li>';
+                return;
+            }
+            
+            historyList.innerHTML = '';
+            history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = "list-group-item bg-transparent text-light d-flex justify-content-between align-items-center small px-0 border-secondary";
+                li.innerHTML = `<span><i class="fa-regular fa-clock me-1 text-muted"></i> ${item.date}</span> <span class="badge bg-warning text-dark fs-6">${item.maxSpeed} ${item.unit}</span>`;
+                historyList.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
