@@ -381,7 +381,7 @@
             }
         });
 
-        // Función de captura de foto instantánea ajustada en la parte inferior
+        // Función de captura de foto instantánea con fuentes compactas y proporcionales
         function takeSnapshot() {
             if (!cameraActive) {
                 alert("Debes activar la cámara de fondo para tomar una instantánea.");
@@ -399,37 +399,44 @@
             // 1. Dibujar el fotograma actual de la cámara
             ctx.drawImage(video, 0, 0, width, height);
 
-            // 2. Coordenadas y dimensiones adaptadas para estampar en la PARTE INFERIOR
-            const boxWidth = width - 80; // Margen simétrico de 40px a cada lado
-            const boxHeight = 220;
+            // 2. Coordenadas y dimensiones proporcionales en la parte inferior
+            const boxWidth = width - 80; // Márgenes de 40px a cada lado
+            const boxHeight = 180;       // Altura compacta
             const boxX = 40;
-            const boxY = height - boxHeight - 60; // Ubicado abajo con un resguardo de 60px
+            const boxY = height - boxHeight - 50;
 
             // Fondo translúcido para el sello de datos
-            ctx.fillStyle = "rgba(18, 18, 18, 0.82)";
+            ctx.fillStyle = "rgba(18, 18, 18, 0.85)";
             ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
             ctx.strokeStyle = "rgba(0, 255, 204, 0.6)";
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 3;
             ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-            // Textos y datos proporcionales al ancho de la foto
+            // Textos con fuentes reducidas y escaladas para evitar cortes
             ctx.fillStyle = "#00ffcc";
-            ctx.font = "bold 34px monospace";
-            ctx.fillText(`CAMISOLUS SPEEDTRACKER`, boxX + 35, boxY + 50);
+            ctx.font = "bold 22px monospace";
+            ctx.fillText("CAMISOLUS SPEEDTRACKER", boxX + 25, boxY + 35);
 
             const now = new Date();
             const dateStr = now.toLocaleDateString('es-AR');
             const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+            // Fecha a la izquierda y Hora a la derecha dentro del ancho disponible
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 28px monospace";
-            ctx.fillText(`FECHA: ${dateStr}`, boxX + 35, boxY + 100);
-            ctx.fillText(`HORA: ${timeStr}`, boxX + 380, boxY + 100);
+            ctx.font = "bold 20px monospace";
+            ctx.fillText(`FECHA: ${dateStr}`, boxX + 25, boxY + 75);
+            
+            // Alineación de la hora hacia el sector derecho del recuadro
+            const timeText = `HORA: ${timeStr}`;
+            ctx.textAlign = "right";
+            ctx.fillText(timeText, boxX + boxWidth - 25, boxY + 75);
+            ctx.textAlign = "left"; // Restablecer alineación
 
+            // Velocidad actual con fuente compacta y elegante
             const currentSpeedText = `${speedValueEl.textContent} ${getUnitLabel()}`;
             ctx.fillStyle = "#00ffcc";
-            ctx.font = "bold 56px sans-serif";
-            ctx.fillText(`VEL: ${currentSpeedText}`, boxX + 35, boxY + 175);
+            ctx.font = "bold 44px sans-serif";
+            ctx.fillText(`VEL: ${currentSpeedText}`, boxX + 25, boxY + 140);
 
             // 3. Generar enlace de descarga automática
             const dataURL = snapshotCanvas.toDataURL('image/png');
