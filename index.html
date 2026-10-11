@@ -381,7 +381,7 @@
             }
         });
 
-        // Función de captura de foto instantánea (Dashcam)
+        // Función de captura de foto instantánea ajustada en la parte inferior
         function takeSnapshot() {
             if (!cameraActive) {
                 alert("Debes activar la cámara de fondo para tomar una instantánea.");
@@ -389,8 +389,8 @@
             }
 
             const video = cameraBackground;
-            const width = video.videoWidth || 1280;
-            const height = video.videoHeight || 720;
+            const width = video.videoWidth || 1080;
+            const height = video.videoHeight || 1920;
 
             snapshotCanvas.width = width;
             snapshotCanvas.height = height;
@@ -399,31 +399,37 @@
             // 1. Dibujar el fotograma actual de la cámara
             ctx.drawImage(video, 0, 0, width, height);
 
-            // 2. Estampar datos flotantes de velocidad y marca en la imagen
-            const currentSpeedText = `${speedValueEl.textContent} ${getUnitLabel()}`;
+            // 2. Coordenadas y dimensiones adaptadas para estampar en la PARTE INFERIOR
+            const boxWidth = width - 80; // Margen simétrico de 40px a cada lado
+            const boxHeight = 220;
+            const boxX = 40;
+            const boxY = height - boxHeight - 60; // Ubicado abajo con un resguardo de 60px
+
+            // Fondo translúcido para el sello de datos
+            ctx.fillStyle = "rgba(18, 18, 18, 0.82)";
+            ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+            ctx.strokeStyle = "rgba(0, 255, 204, 0.6)";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+            // Textos y datos proporcionales al ancho de la foto
+            ctx.fillStyle = "#00ffcc";
+            ctx.font = "bold 34px monospace";
+            ctx.fillText(`CAMISOLUS SPEEDTRACKER`, boxX + 35, boxY + 50);
+
             const now = new Date();
             const dateStr = now.toLocaleDateString('es-AR');
-            const timeStr = now.toLocaleTimeString('es-AR');
-
-            // Fondo translúcido para las estadísticas estampadas
-            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-            ctx.fillRect(40, 40, 480, 160);
-            ctx.strokeStyle = "#00ffcc";
-            ctx.lineWidth = 4;
-            ctx.strokeRect(40, 40, 480, 160);
-
-            // Textos sobre la imagen
-            ctx.fillStyle = "#00ffcc";
-            ctx.font = "bold 32px monospace";
-            ctx.fillText(`CAMISOLUS SPEEDTRACKER`, 65, 85);
+            const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 24px monospace";
-            ctx.fillText(`FECHA: ${dateStr}   HORA: ${timeStr}`, 65, 125);
+            ctx.font = "bold 28px monospace";
+            ctx.fillText(`FECHA: ${dateStr}`, boxX + 35, boxY + 100);
+            ctx.fillText(`HORA: ${timeStr}`, boxX + 380, boxY + 100);
 
+            const currentSpeedText = `${speedValueEl.textContent} ${getUnitLabel()}`;
             ctx.fillStyle = "#00ffcc";
-            ctx.font = "bold 48px sans-serif";
-            ctx.fillText(`VEL: ${currentSpeedText}`, 65, 178);
+            ctx.font = "bold 56px sans-serif";
+            ctx.fillText(`VEL: ${currentSpeedText}`, boxX + 35, boxY + 175);
 
             // 3. Generar enlace de descarga automática
             const dataURL = snapshotCanvas.toDataURL('image/png');
