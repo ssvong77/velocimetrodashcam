@@ -381,7 +381,7 @@
             }
         });
 
-        // Función de captura de foto instantánea con fuentes compactas y proporcionales
+        // Función de captura de foto instantánea con las 4 líneas ordenadas
         function takeSnapshot() {
             if (!cameraActive) {
                 alert("Debes activar la cámara de fondo para tomar una instantánea.");
@@ -399,9 +399,9 @@
             // 1. Dibujar el fotograma actual de la cámara
             ctx.drawImage(video, 0, 0, width, height);
 
-            // 2. Coordenadas y dimensiones proporcionales en la parte inferior
+            // 2. Coordenadas y dimensiones del recuadro inferior optimizado para 4 líneas
             const boxWidth = width - 80; // Márgenes de 40px a cada lado
-            const boxHeight = 180;       // Altura compacta
+            const boxHeight = 220;       
             const boxX = 40;
             const boxY = height - boxHeight - 50;
 
@@ -412,7 +412,7 @@
             ctx.lineWidth = 3;
             ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
-            // Textos con fuentes reducidas y escaladas para evitar cortes
+            // Línea 1: Título / Marca
             ctx.fillStyle = "#00ffcc";
             ctx.font = "bold 22px monospace";
             ctx.fillText("CAMISOLUS SPEEDTRACKER", boxX + 25, boxY + 35);
@@ -421,22 +421,19 @@
             const dateStr = now.toLocaleDateString('es-AR');
             const timeStr = now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-            // Fecha a la izquierda y Hora a la derecha dentro del ancho disponible
+            // Línea 2: Fecha
             ctx.fillStyle = "#ffffff";
             ctx.font = "bold 20px monospace";
             ctx.fillText(`FECHA: ${dateStr}`, boxX + 25, boxY + 75);
-            
-            // Alineación de la hora hacia el sector derecho del recuadro
-            const timeText = `HORA: ${timeStr}`;
-            ctx.textAlign = "right";
-            ctx.fillText(timeText, boxX + boxWidth - 25, boxY + 75);
-            ctx.textAlign = "left"; // Restablecer alineación
 
-            // Velocidad actual con fuente compacta y elegante
+            // Línea 3: Hora
+            ctx.fillText(`HORA: ${timeStr}`, boxX + 25, boxY + 115);
+
+            // Línea 4: Velocidad Actual
             const currentSpeedText = `${speedValueEl.textContent} ${getUnitLabel()}`;
             ctx.fillStyle = "#00ffcc";
             ctx.font = "bold 44px sans-serif";
-            ctx.fillText(`VEL: ${currentSpeedText}`, boxX + 25, boxY + 140);
+            ctx.fillText(`VEL: ${currentSpeedText}`, boxX + 25, boxY + 180);
 
             // 3. Generar enlace de descarga automática
             const dataURL = snapshotCanvas.toDataURL('image/png');
